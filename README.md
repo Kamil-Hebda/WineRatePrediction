@@ -99,7 +99,10 @@ The `LR_hyperparams_search` function supports three types of hyperparameter sear
 - **Optuna** (`optuna`)
 
 ### Run the Optimization
-You can run the optimization using the widget interface in Jupyter Notebook or by calling the function directly:
+You can run the optimization using the widget interface in Jupyter Notebook: 
+![image](https://github.com/user-attachments/assets/a685fa1c-8f6c-4df8-b069-3111ad81944d)
+
+or by calling the function directly:
 ```python
 best_model = LR_hyperparams_search(X_train, y_train, X_test, y_test, n_trials=50, type_of_search='optuna')
 ```
