@@ -86,33 +86,121 @@ pip install -r requirements.txt
 
 ## How to Use
 
+### Data Loading and Exploration
+
+1. **Load the dataset**: Place the red and white wine datasets in the `data/raw/` directory and load them using:
+   ```python
+   red_wine_df = pd.read_csv("data/raw/wine+quality/winequality-red.csv", sep=';')
+   white_wine_df = pd.read_csv("data/raw/wine+quality/winequality-white.csv", sep=';')
+
+   red_wine_df['colour'] = 'red'
+   white_wine_df['colour'] = 'white'
+
+   dataset_df = pd.concat([red_wine_df, white_wine_df])
+   ```
+
+2. **Explore the data**:
+   - Check basic information: `dataset_df.info()`
+   - View statistics: `dataset_df.describe()`
+   - Inspect unique values in categorical columns: `dataset_df.select_dtypes(include=['object']).nunique()`
+
+3. **Visualize data** (optional):
+   - Plot histograms: `dataset_df.hist(figsize=(10, 10))`
+   - Examine correlations:
+     ```python
+     sns.heatmap(dataset_df.corr(), annot=True, cmap='coolwarm')
+     ```
+
+---
+
 ### Preprocessing the Data
-The script preprocesses the dataset by:
-- Combining red and white wine data.
-- Using `ColumnTransformer` to preprocessing data using `MinMaxScaler` and `BinaryEncoder`
-- Splitting the data into training and testing sets.
 
-### Hyperparameter Optimization
-The `LR_hyperparams_search` function supports three types of hyperparameter searches:
-- **Grid Search** (`grid`)
-- **Random Search** (`random`)
-- **Optuna** (`optuna`)
+1. **Prepare the data**:
+   - Shuffle: `dataset_df = dataset_df.sample(frac=1).reset_index(drop=True)`
+   - Split target and features:
+     ```python
+     y = dataset_df['quality']
+     X = dataset_df.drop(['quality'], axis=1)
+     ```
 
-### Run the Optimization
-You can run the optimization using the widget interface in Jupyter Notebook: 
-![image](https://github.com/user-attachments/assets/a685fa1c-8f6c-4df8-b069-3111ad81944d)
+2. **Define column types**:
+   ```python
+   numerical_features = X.select_dtypes(include=['int64', 'float64']).columns.tolist()
+   categorical_features = X.select_dtypes(include=['object']).columns.tolist()
+   ```
 
-or by calling the function directly:
-```python
-best_model = LR_hyperparams_search(X_train, y_train, X_test, y_test, n_trials=50, type_of_search='optuna')
-```
+3. **Split into training and test sets**:
+   ```python
+   X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+   ```
+
+4. **Apply preprocessing**:
+   - Scale numerical features and encode categorical ones:
+     ```python
+     preprocessor = ColumnTransformer([
+         ('num', MinMaxScaler(), numerical_features),
+         ('cat', ce.BinaryEncoder(), categorical_features)
+     ])
+     X_train_processed = preprocessor.fit_transform(X_train)
+     X_test_processed = preprocessor.transform(X_test)
+     ```
+
+5. **Save preprocessed data**:
+   ```python
+   pd.DataFrame(X_train_processed).to_csv("data/processed/processed_data_train.csv", index=False)
+   pd.DataFrame(X_test_processed).to_csv("data/processed/processed_data_test.csv", index=False)
+   ```
+
+---
+
+### Training and Hyperparameter Optimization
+
+1. **Hyperparameter Optimization**:
+   Search for the best parameters using methods like grid search or Optuna:
+   ```python
+   best_model = LR_hyperparams_search(X_train, y_train, X_test, y_test, n_trials=50, type_of_search='random')
+   ```
+
+2. **Train models**:
+   Train models (e.g., Logistic Regression, XGBoost, MLP)
+
+3. **Interactive Optimization**:
+   Use a widget interface to select models and tune hyperparameters directly in Jupyter Notebook.
+    You can run the optimization using the widget interface in Jupyter Notebook: 
+    ![image](https://github.com/user-attachments/assets/a685fa1c-8f6c-4df8-b069-3111ad81944d)
+---
+
+
 
 ### Evaluate Model Performance
-Evaluate the trained model using accuracy and other metrics:
-```python
-TO DO
-```
 
+After training and optimizing the models, you can evaluate their performance using various metrics. These metrics help assess how well the model predicts wine quality, both in terms of classification and regression.
+
+For **classification** tasks, we use precision, recall, F1 score, and accuracy:
+- **Precision** measures the proportion of positive predictions that were correct.
+- **Recall** measures the proportion of actual positives that were correctly identified by the model.
+- **F1 Score** is the harmonic mean of precision and recall, balancing both metrics.
+- **Accuracy** is the proportion of correct predictions (both positive and negative) out of all predictions.
+
+For **regression** tasks, we evaluate using Mean Squared Error (MSE), Mean Absolute Error (MAE), and R-squared (R²):
+- **MSE** measures the average squared difference between predicted and actual values, giving more weight to large errors. 
+- **MAE** measures the average absolute difference between predicted and actual values, indicating the magnitude of error without amplifying large deviations.
+- **R²** indicates how well the model's predictions match the actual data; values closer to 1 suggest a better fit.
+
+These metrics are especially useful for regression problems, but I also use them here to observe how far the model's predictions deviate from the actual wine quality classes. For example, an MSE of 0.4 indicates minor errors, suggesting that the predictions are close to the true values. However, an MSE of 3 would reflect significant errors, where the predicted quality is far from the actual value. I believe these metrics provide a clearer understanding of the model's predictions and help evaluate its overall performance more effectively.
+
+You can evaluate the performance as follows:
+```python
+print(f"Precision: {precision:.4f}")
+print(f"Recall: {recall:.4f}")
+print(f"F1 Score: {f1:.4f}")
+print(f"Accuracy: {accuracy:.4f}")
+
+print(f"Mean Squared Error (MSE): {mse:.4f}")
+print(f"Mean Absolute Error (MAE): {mae:.4f}")
+print(f"R-squared (R2): {r2:.4f}
+")
+```
 ---
 
 ## Widgets Interface
@@ -129,18 +217,19 @@ WineRatePrediction/
 |   |   |──wine+quality/
 │   |   |   ├── winequality-red.csv
 │   |   |   ├── winequality-white.csv
-|   |──processed/                   # Folder to store processed data
+|   |──processed/             # Folder to store processed data
 │
 ├── notebooks/                # Jupyter Notebooks for experimentation
 │   ├── 01_eda.ipynb
 │   ├── 02_preprocessing.ipynb
 │   ├── 03_model_training.ipynb
 │
-├── functions/                  # Python scripts
-│   ├──__init__.py             # Functions for hyperparameter optimization
+├── functions/                # Python scripts
+│   ├──__init__.py            # Initialize Python module
 │   ├──LR_hyperparams_search.py
 │   ├──MLPC_hyperparams_search.py
 │   ├──xgboost_hyperparams_search.py
+│   ├──MLP_model.py           # Custom MLP model implementation
 │
 ├── requirements.txt          # Required Python packages
 ├── README.md                 # Project documentation
